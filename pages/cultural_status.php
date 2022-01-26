@@ -121,4 +121,162 @@
 </div>
 
 <script>
+    let totalCnt = -1;
+    let currentIndex = 1;
+    let lastestIndex = -1;
+
+    $("html").ready(function() {
+        selectIndex(1);
+    });
+
+    function selectIndex(obj){
+        let str = "";
+        let index = -1;
+
+        if(typeof obj == "object"){
+            str = $(obj).text();
+        }
+        else {
+            str = obj;
+        }
+
+        if(parseInt(str)){
+            index = parseInt(str);
+        }
+
+        switch(str){
+            case "<<":
+                currentIndex = 1;
+                break;
+            case "<":
+                if(currentIndex - 1 >= 1) {
+                    currentIndex--;
+                }
+                break;
+            case ">":
+                if(currentIndex + 1 <= lastestIndex) {
+                    currentIndex++;
+                }
+                break;
+            case ">>":
+                currentIndex = lastestIndex;
+                break;
+            default:
+                currentIndex = index;
+                break;
+        }
+
+        let tmp_i = 0;
+
+        if(currentIndex - 5 < 0){
+            tmp_i = 1;
+        }
+        else if(currentIndex - 5 >= 0 && currentIndex + 5 <= lastestIndex){
+            tmp_i = currentIndex - 4;
+        }
+        else if(currentIndex + 5 > lastestIndex){
+            tmp_i = lastestIndex - 8;
+        }
+
+        $("#cultural-pagination li").remove();
+
+        let parent = $("#cultural-pagination");
+
+        obj = $(`
+        <li class="page-item">
+            <a class="page-link" onclick="selectIndex(this)">&lt;&lt;</a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" onclick="selectIndex(this)">&lt;</a>
+        </li>
+        `);
+
+        parent.append(obj);
+
+        for(let i = tmp_i; i < tmp_i + 9; i++){
+            obj = $(`
+            <li class="page-item">
+                <a class="page-link" onclick="selectIndex(this)">${ i }</a>
+            </li>
+            `);
+
+            if(i == currentIndex){
+                obj.addClass("active");
+            }
+
+            parent.append(obj);
+        }
+
+        obj = $(`
+        <li class="page-item">
+            <a class="page-link" onclick="selectIndex(this)">&gt;</a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" onclick="selectIndex(this)">&gt;&gt;</a>
+        </li>
+        `);
+
+        parent.append(obj);
+
+        updateLayout();
+    }
+
+    function updateLayout(){
+        $.ajax({
+            type: "POST",
+            url: "xml/nihList.xml",
+            dataType: "xml",
+            cache: false,
+            async: false,
+            success: function (response) {
+                response = $(response);
+
+                totalCnt = parseInt(response.find("totalCnt").text());
+                lastestIndex = parseInt(totalCnt / 8) + 1;
+
+                let items = response.find("item");
+
+                $("#cultural-album .row .col-3").remove();
+
+                let parent = $("#cultural-album .row");
+                for(let i = (currentIndex - 1) * 8; i < (currentIndex - 1) * 8 + 8; i++){
+                    if(i > totalCnt - 1) {
+                        break;
+                    }
+
+                    let item = $(items[i]);
+
+                    let imageUrl = "";
+                    let ccbaMnm1 = item.find("ccbaMnm1").text();
+                    let ccbaKdcd = item.find("ccbaKdcd").text();
+                    let ccbaCtcd = item.find("ccbaCtcd").text();
+                    let ccbaAsno = item.find("ccbaAsno").text();
+
+                    $.ajax({
+                        type: "POST",
+                        url: "xml/detail/" + ccbaKdcd + "_" + ccbaCtcd + "_" + ccbaAsno + ".xml",
+                        dataType: "xml",
+                        cache: false,
+                        async: false,
+                        success: function (response) {
+                            imageUrl = $(response).find("imageUrl").text();
+                        }
+                    });
+
+                    let obj = $(`
+                    <div class="col-3 my-3">
+                        <div class="card text-center bg-transparent">
+                            <div class="w-100 border-bottom card-custom-img position-relative" style="height: 180px; background: url(xml/nihcImage/${ imageUrl }); background-size: cover; background-position: center center;"></div>
+                            <div class="card-body">
+                                <h5 class="card-title border-bottom pb-1 m-0">${ ccbaMnm1 }</h5>
+                            </div>
+                        </div>
+                    </div>
+                    `);
+
+                    parent.append(obj);
+                }
+            }
+        });
+    }
 </script>
